@@ -1,7 +1,10 @@
 # Vault Auto Unseal Feature using AWS KMS Setup
-This repo has a vagrant file to create an enterprise Vault Cluster with Consul backend.  
-Seal stanza is added to the Vault config file to setup auto unseal using AWS KMS.
-Vagrant file also creates a secondary cluster with auto unseal with AWS KMS using a different KMS ring.  This secondary can be configured as a DR or Performance Replication to perform further tests.
+This folder has a vagrant file to create a Vault Cluster with Consul backend.  
+Seal stanza is added to the Vault config file to setup auto unseal using AWS KMS. 
+
+This Vault cluster will be used to as a Transit Engine for auto unseal a separate Vault cluster defined in the ```secondary``` folder.
+
+Vagrant file has code block to create a secondary cluster with auto unseal with AWS KMS using a different KMS ring.  This secondary can be configured as a DR or Performance Replication to perform further tests.
 
 Each cluster contains 2 nodes and each note consists of a Consul Server and Vault server.  
 The configuration is used for learning purposes.  This is NOT following the reference architecture for Vault and should not be used for a Production setup.
@@ -106,17 +109,16 @@ $vagrant ssh vault1
 vagrant@v1: $vault status
 
 vagrant@v1: $vault operator init -recovery-shares=1 recovery-threshold=1
-Recovery Key 1: uf2dgR88QOHSSnnIDbSmGSNp1VJ+nIrdFlI0ZcebW80=
+Recovery Key 1: G25YBN1CvXjTSbSxuJTGLSzoK/RAkbrvPwJU7gM+KFc=
 
-Initial Root Token: s.tlaekTPlcIytjcUWDGSEuqOh
+Initial Root Token: s.WSsEUEqEOmYEAhK26AQy1iZ9
 
 Success! Vault is initialized
 
 Recovery key initialized with 1 key shares and a key threshold of 1. Please
 securely distribute the key shares printed above.
 
-vagrant@v1: $vault status
-
+vagrant@v1:~$ vault status
 Key                      Value
 ---                      -----
 Recovery Seal Type       shamir
@@ -125,8 +127,8 @@ Sealed                   false
 Total Recovery Shares    1
 Threshold                1
 Version                  1.1.2+prem
-Cluster Name             vault-cluster-4ec938e4
-Cluster ID               f395a1d9-fa91-4782-7aad-b7ea2a0b6af0
+Cluster Name             vault-cluster-9d6f6589
+Cluster ID               f1f3e2e7-59c9-0471-c07e-4940eb1e1693
 HA Enabled               true
 HA Cluster               https://10.100.1.11:8201
 HA Mode                  active
@@ -136,7 +138,23 @@ vagrant@v1: $exit
 
 $vagrant ssh vault2
 
-vagrant@v2: $ vault status
+vagrant@v2:~$ vault status
+Key                                    Value
+---                                    -----
+Recovery Seal Type                     shamir
+Initialized                            true
+Sealed                                 false
+Total Recovery Shares                  1
+Threshold                              1
+Version                                1.1.2+prem
+Cluster Name                           vault-cluster-9d6f6589
+Cluster ID                             f1f3e2e7-59c9-0471-c07e-4940eb1e1693
+HA Enabled                             true
+HA Cluster                             https://10.100.1.11:8201
+HA Mode                                standby
+Active Node Address                    http://10.100.1.11:8200
+Performance Standby Node               true
+Performance Standby Last Remote WAL    0
 
 ```
 
@@ -147,32 +165,10 @@ Once the Vault is initialised, it would be unsealed by the use of AWS KMS.   Thi
 When Vault is restarted, it would automatically unseal using AWS KMS.
 
 ```
-vagrant@v1: $ sudo systemctl restart vault
-vagrant@v1: $ sudo systemctl status vault
+vagrant@v2: $ sudo systemctl stop vault
+vagrant@v2: $ sudo systemctl start vault
 
-vault.service - "Vault secret management tool"
-   Loaded: loaded (/etc/systemd/system/vault.service; enabled; vendor preset: enabled)
-   Active: active (running) since Mon 2019-05-20 07:45:16 UTC; 6s ago
- Main PID: 2679 (vault)
-    Tasks: 11 (limit: 1152)
-   CGroup: /system.slice/vault.service
-           └─2679 /usr/local/bin/vault server -config=/etc/vault/vault.hcl
-
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.817Z [INFO]  core: successfully mounted backend: type=identity path=identity/
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.817Z [INFO]  core: successfully mounted backend: type=cubbyhole path=cubbyhole/
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.825Z [INFO]  core: successfully enabled credential backend: type=token path=token/
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.825Z [INFO]  core: restoring leases
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.827Z [INFO]  expiration: lease restore complete
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.828Z [INFO]  identity: entities restored
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.828Z [INFO]  identity: groups restored
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.829Z [INFO]  mfa: configurations restored
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.830Z [INFO]  core: post-unseal setup complete
-May 20 07:45:19 v1 vault[2679]: 2019-05-20T07:45:19.830Z [INFO]  replication.standby: requesting WAL stream: guard=dc8b0700
-
-
-
-vagrant@v1: $ vault status
-
+vagrant@v2:~$ vault status
 Key                                    Value
 ---                                    -----
 Recovery Seal Type                     shamir
@@ -181,39 +177,16 @@ Sealed                                 false
 Total Recovery Shares                  1
 Threshold                              1
 Version                                1.1.2+prem
-Cluster Name                           vault-cluster-4ec938e4
-Cluster ID                             f395a1d9-fa91-4782-7aad-b7ea2a0b6af0
+Cluster Name                           vault-cluster-9d6f6589
+Cluster ID                             f1f3e2e7-59c9-0471-c07e-4940eb1e1693
 HA Enabled                             true
-HA Cluster                             https://10.100.1.12:8201
+HA Cluster                             https://10.100.1.11:8201
 HA Mode                                standby
-Active Node Address                    http://10.100.1.12:8200
+Active Node Address                    http://10.100.1.11:8200
 Performance Standby Node               true
 Performance Standby Last Remote WAL    0
 
-
-vagrant@v1: $exit
-
-$vagrant ssh vault2
-
-vagrant@v2:~$ vault status
-Key                      Value
----                      -----
-Recovery Seal Type       shamir
-Initialized              true
-Sealed                   false
-Total Recovery Shares    1
-Threshold                1
-Version                  1.1.2+prem
-Cluster Name             vault-cluster-4ec938e4
-Cluster ID               f395a1d9-fa91-4782-7aad-b7ea2a0b6af0
-HA Enabled               true
-HA Cluster               https://10.100.1.12:8201
-HA Mode                  active
-Last WAL                 17
-
 ```
-
-In the above, it should be noted that Node 1 has now become the Standby.  When Node 1 was restarted, Node 2 became the leader.
 
 ## Accessing UI
 
@@ -224,3 +197,63 @@ e.g., Consul UI http://10.100.1.11:8500
 e.g., Vault UI http://10.100.2.11:8500 
 
 
+## Create Token For Transit Auto Unseal
+
+In order to use this current Vault cluster as a Transit Engine to auto unseal another Vault Cluster, the following needs to happen.
+
+1. Login to the Vault cluster with an admin token. For the test root token is used but always delete the root token after creating admin token with admin policy
+2. Enable Transit Engine
+3. Create a Transit Key
+4. Create a Policy to enable update capabilities at the encrypt and decrypt paths of the key
+5. Create a token by attaching the above policy
+6. Use this token and the Vault address in the other Vault cluster to configure transit auto unseal
+
+
+```
+vagrant@v1:~$ vault login s.WSsEUEqEOmYEAhK26AQy1iZ9
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                  Value
+---                  -----
+token                s.WSsEUEqEOmYEAhK26AQy1iZ9
+token_accessor       5U8f3PkWNi1LEgj53zpzOekd
+token_duration       ∞
+token_renewable      false
+token_policies       ["root"]
+identity_policies    []
+policies             ["root"]
+
+vagrant@v1:~$ vault secrets enable transit
+Success! Enabled the transit secrets engine at: transit/
+
+vagrant@v1:~$ vault write -f transit/keys/transit-auto-unseal-key
+Success! Data written to: transit/keys/transit-auto-unseal-key
+
+vagrant@v1:~$ cat auto-unseal-policy.hcl
+path "transit/encrypt/transit-auto-unseal-key" {
+  capabilities = ["update"]
+}
+
+path "transit/decrypt/transit-auto-unseal-key" {
+  capabilities = ["update"]
+}
+
+vagrant@v1:~$ vault policy write transit_autounseal-policy auto-unseal-policy.hcl
+Success! Uploaded policy: transit_autounseal-policy
+
+vagrant@v1:~$ vault token create -policy="transit_autounseal-policy"
+Key                  Value
+---                  -----
+token                s.oqkuvULbV41UW9u8wlRDCGaK
+token_accessor       dtF12CRHHFK2shE3hPNY4f5E
+token_duration       768h
+token_renewable      true
+token_policies       ["default" "transit_autounseal-policy"]
+identity_policies    []
+policies             ["default" "transit_autounseal-policy"]
+
+```
+
+Instead of passing the token as shown above, token can be wrapped for appropriate TTL and this wrapped token can be passed to the other Vault cluster.  In this scenario, the other Vault cluster needs to unwrap the wrapped token to get the token before using it in the transit stanza.

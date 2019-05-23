@@ -1,0 +1,4 @@
+transit_vault_address=<other-active-vault-cluster-address e.g.,http://10.100.1.11:8200>
+transit_key_name=<transit-key-name-in-other-active-vault-cluster>
+transit_mount_path=<transit-mount-path e.g., transit>
+transit_token=<token-generated-in-active-cluster-with-policies-to-perform-encrypt-and-decrypt>
