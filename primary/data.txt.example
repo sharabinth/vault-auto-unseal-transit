@@ -1,0 +1,5 @@
+aws_access_key=<paste-your-AWS-ACCESS-KEY>
+aws_secret_access_key=<paste-your-AWS-SECRET-ACCESS-KEY>
+aws_primary_kms=<paste-aws-kms-key-for-primary-cluster>
+aws_secondary_kms=<paste-aws-kms-key-for-replica-cluster>
+aws_region=<paste-your-aws-region>
